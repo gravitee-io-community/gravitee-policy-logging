@@ -1,0 +1,131 @@
+= Groovy Policy
+
+ifdef::env-github[]
+image:https://img.shields.io/github/watchers/gravitee-io/gravitee-policy-groovy.svg?style=social&maxAge=2592000)["GitHub", link="https://github.com/gravitee-io/gravitee-policy-groovy"]
+image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-groovy/master["Build status", link="https://ci.gravitee.io/job/gravitee-io/job/gravitee-policy-groovy/"]
+image:https://badges.gitter.im/Join Chat.svg["Gitter", link="https://gitter.im/gravitee-io/gravitee-io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+endif::[]
+
+== Phase
+
+[cols="^2,^2,^2",options="header"]
+|===
+|onRequest|onResponse|onResponseContent
+
+|X
+|X
+|X
+
+|===
+
+== Description
+The http://www.groovy-lang.org/[Groovy] policy lets the user (ie. API publisher) to run groovy scripts during all the
+stages of the request processing through the gateway.
+
+The following groovy script is an example executed during the _OnResponse_ phase to change HTTP headers:
+
+[source, groovy]
+----
+response.headers.remove 'X-Powered-By'
+response.headers.'X-Gravitee-Gateway-Version' = '0.14.0'
+----
+
+== Usage
+
+You can attach a groovy script to all phases of the request processing.
+
+OnRequest / OnResponse
+^^^^^^^^^^^^^^^^^^^^^^
+
+Some variables are automatically bind to the Groovy script to let user to use them and define the policy behavior.
+
+[width="100%",cols="2,10",options="header"]
+.List of groovy script variables
+|===
+| Name | Description
+
+| *request* | Inbound HTTP request
+| *response* | Outbound HTTP response
+| *context* | `PolicyContext` used to access external components such as services, resources, ...
+| *result* | Result of the groovy script
+
+|===
+
+You can also break request or response processing by setting the result's state to `FAILURE`, providing an HTTP
+status code and a message (not mandatory, status is equals to 500 (internal server error) by default).
+
+[source, groovy]
+----
+if (request.headers.containsKey('X-Gravitee-Break')) {
+    result.state = FAILURE
+    result.code = 500
+    result.error = 'Stop request processing due to X-Gravitee-Break header'
+} else {
+    request.headers.'X-Groovy-Policy' = 'ok'
+}
+----
+
+OnResponseContent
+^^^^^^^^^^^^^^^^^
+
+You can also transform response body content by using a groovy script during the _OnResponseContent_ phase.
+
+Following is an example to show you how to use _Groovy policy_ to transform a JSON content:
+
+===== Input body content
+[source, json]
+----
+[
+    {
+        "age": 32,
+        "firstname": "John",
+        "lastname": "Doe"
+    }
+]
+----
+
+===== Groovy script
+[source, groovy]
+----
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+def jsonSlurper = new JsonSlurper()
+def content = jsonSlurper.parseText(response)
+content[0].firstname = 'Hacked ' + content[0].firstname
+content[0].country = 'US'
+return JsonOutput.toJson(content)
+----
+
+===== Output body content
+[source, json]
+----
+[
+    {
+        "age": 32,
+        "firstname": "Hacked John",
+        "lastname": "Doe",
+        "country": "US
+    }
+]
+----
+
+== Configuration
+[source, json]
+.Configuration example
+"groovy": {
+    "onRequestScript": "request.headers.'X-Gravitee-Gateway' = '0.14.0'",
+    "onResponseScript": "response.headers.remove 'X-Powered-By'",
+    "onResponseContentScript": "" // Not executed if empty
+}
+
+== Http Status Code
+
+|===
+|Code |Message
+
+| ```500```
+| The groovy script can not be parsed / compiled or executed (mainly due to a syntax error)
+
+|===
+
