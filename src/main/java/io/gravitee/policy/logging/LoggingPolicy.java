@@ -15,6 +15,8 @@
  */
 package io.gravitee.policy.logging;
 
+import io.gravitee.gateway.api.Request;
+import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.stream.BufferedReadWriteStream;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
@@ -23,6 +25,8 @@ import io.gravitee.policy.api.annotations.OnRequestContent;
 import io.gravitee.policy.api.annotations.OnResponseContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.stream.Collectors;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -36,22 +40,29 @@ public class LoggingPolicy {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoggingPolicy.class);
 
     @OnRequestContent
-    public ReadWriteStream onRequestContent() {
+    public ReadWriteStream onRequestContent(Request request) {
         return new BufferedReadWriteStream() {
             @Override
             public SimpleReadWriteStream<Buffer> write(Buffer content) {
-                LOGGER.info("Request stream: {}", content);
+                LOGGER.info(">>> {}/{}: {} {}", request.id(), request.transactionId(), request.method(), request.uri());
+                request.headers().forEach((headerName, headerValues) -> LOGGER.info(">>> {}/{}: {}: {}",
+                        request.id(), request.transactionId(), headerName, headerValues.stream().collect(Collectors.joining(","))));
+
+                LOGGER.info(">>> {}: {}", request.id(), content);
                 return super.write(content);
             }
         };
     }
 
     @OnResponseContent
-    public ReadWriteStream onResponseContent() {
+    public ReadWriteStream onResponseContent(Request request, Response response) {
         return new BufferedReadWriteStream() {
             @Override
             public SimpleReadWriteStream<Buffer> write(Buffer content) {
-                LOGGER.info("Response stream: {}", content);
+                LOGGER.info("<<< {}/{}: HTTP Status - {}", request.id(), request.transactionId(), response.status());
+                LOGGER.info("<<< {}: {}", request.id(), content);
+                request.headers().forEach((headerName, headerValues) -> LOGGER.info("<<< {}/{}: {}: {}",
+                        request.id(), request.transactionId(), headerName, headerValues.stream().collect(Collectors.joining(","))));
                 return super.write(content);
             }
         };
