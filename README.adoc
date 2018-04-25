@@ -5,6 +5,9 @@ image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-lo
 image:https://badges.gitter.im/Join Chat.svg["Gitter", link="https://gitter.im/gravitee-io/gravitee-io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
 endif::[]
 
+== Deprecated
+CAUTION: This policy is deprecated and no more available since Gravitee.io APIM 1.16
+
 == Phase
 
 [cols="^2,^2,^2",options="header"]
